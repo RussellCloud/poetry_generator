@@ -5,7 +5,7 @@ import tensorflow as tf
 
 #-------------------------------数据预处理---------------------------#
 
-poetry_file ='input/poetry.txt'
+poetry_file ='/input/poetry.txt'
 
 # 诗集
 poetrys = []
@@ -15,7 +15,7 @@ outputFile = open("output/poetry.txt", "a",encoding="utf-8");
 with open(poetry_file, "r", encoding='utf-8',) as f:
 	for line in f:
 		try:
-			outputFile.write(line);
+			outputFile.write(line)
 			title, content = line.strip().split(':')
 			content = content.replace(' ','')
 			if '_' in content or '(' in content or '（' in content or '《' in content or '[' in content:

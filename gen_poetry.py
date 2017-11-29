@@ -4,7 +4,7 @@ import tensorflow as tf
 
 #-------------------------------数据预处理---------------------------#
 
-poetry_file ='input/poetry.txt'
+poetry_file ='/input/poetry.txt'
 
 # 诗集
 poetrys = []
@@ -117,7 +117,7 @@ def gen_poetry():
 		sess.run(tf.global_variables_initializer())
 
 		saver = tf.train.Saver(tf.global_variables())
-		saver.restore(sess, 'input/poetry.module-49')
+		saver.restore(sess, '/input/poetry.module-49')
 
 		state_ = sess.run(cell.zero_state(1, tf.float32))
 
