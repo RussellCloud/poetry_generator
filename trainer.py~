@@ -1,16 +1,21 @@
+#encoding=utf-8
 import collections
 import numpy as np
 import tensorflow as tf
 
 #-------------------------------数据预处理---------------------------#
 
-poetry_file ='/input/model/poetry.txt'
+poetry_file ='/input/poetry.txt'
 
 # 诗集
 poetrys = []
+
+#复制一份数据到output里面，供后面使用
+outputFile = open("output/poetry.txt", "a",encoding="utf-8");
 with open(poetry_file, "r", encoding='utf-8',) as f:
 	for line in f:
 		try:
+			outputFile.write(line)
 			title, content = line.strip().split(':')
 			content = content.replace(' ','')
 			if '_' in content or '(' in content or '（' in content or '《' in content or '[' in content:
@@ -38,14 +43,14 @@ words, _ = zip(*count_pairs)
 words = words[:len(words)] + (' ',)
 # 每个字映射为一个数字ID
 word_num_map = dict(zip(words, range(len(words))))
-
 to_num = lambda word: word_num_map.get(word, len(words))
 poetrys_vector = [ list(map(to_num, poetry)) for poetry in poetrys]
 #[[314, 3199, 367, 1556, 26, 179, 680, 0, 3199, 41, 506, 40, 151, 4, 98, 1],
 #[339, 3, 133, 31, 302, 653, 512, 0, 37, 148, 294, 25, 54, 833, 3, 1, 965, 1315, 377, 1700, 562, 21, 37, 0, 2, 1253, 21, 36, 264, 877, 809, 1]
 #....]
 
-batch_size = 1
+# 每次取64首诗进行训练
+batch_size = 64
 n_chunk = len(poetrys_vector) // batch_size
 x_batches = []
 y_batches = []
@@ -100,39 +105,32 @@ def neural_network(model='lstm', rnn_size=128, num_layers=2):
 	logits = tf.matmul(output, softmax_w) + softmax_b
 	probs = tf.nn.softmax(logits)
 	return logits, last_state, probs, cell, initial_state
-
-#-------------------------------生成古诗---------------------------------#
-# 使用训练完成的模型
-
-def gen_poetry():
-	def to_word(weights):
-		t = np.cumsum(weights)
-		s = np.sum(weights)
-		sample = int(np.searchsorted(t, np.random.rand(1)*s))
-		return words[sample]
-
-	_, last_state, probs, cell, initial_state = neural_network()
+#训练
+def train_neural_network():
+	logits, last_state, _, _, _ = neural_network()
+	targets = tf.reshape(output_targets, [-1])
+	loss = tf.nn.seq2seq.sequence_loss_by_example([logits], [targets], [tf.ones_like(targets, dtype=tf.float32)], len(words))
+	cost = tf.reduce_mean(loss)
+	learning_rate = tf.Variable(0.0, trainable=False)
+	tvars = tf.trainable_variables()
+	grads, _ = tf.clip_by_global_norm(tf.gradients(cost, tvars), 5)
+	optimizer = tf.train.AdamOptimizer(learning_rate)
+	train_op = optimizer.apply_gradients(zip(grads, tvars))
 
 	with tf.Session() as sess:
 		sess.run(tf.global_variables_initializer())
 
 		saver = tf.train.Saver(tf.global_variables())
-		saver.restore(sess, '/input/model/poetry.module-49')
 
-		state_ = sess.run(cell.zero_state(1, tf.float32))
+		for epoch in range(50):
+			sess.run(tf.assign(learning_rate, 0.002 * (0.97 ** epoch)))
+			n = 0
+			for batche in range(n_chunk):
+				train_loss, _ , _ = sess.run([cost, last_state, train_op], feed_dict={input_data: x_batches[n], output_targets: y_batches[n]})
+				n += 1
+				print(epoch, batche, train_loss)
+			if epoch % 7 == 0:
+				saver.save(sess, 'output/poetry.module', global_step=epoch)
 
-		x = np.array([list(map(word_num_map.get, '['))])
-		[probs_, state_] = sess.run([probs, last_state], feed_dict={input_data: x, initial_state: state_})
-		word = to_word(probs_)
-		#word = words[np.argmax(probs_)]
-		poem = ''
-		while word != ']':
-			poem += word
-			x = np.zeros((1,1))
-			x[0,0] = word_num_map[word]
-			[probs_, state_] = sess.run([probs, last_state], feed_dict={input_data: x, initial_state: state_})
-			word = to_word(probs_)
-			#word = words[np.argmax(probs_)]
-		return poem
 
-print(gen_poetry())
+train_neural_network()

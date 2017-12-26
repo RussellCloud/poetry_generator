@@ -5,7 +5,7 @@ import tensorflow as tf
 
 #-------------------------------数据预处理---------------------------#
 
-poetry_file ='/input/poetry.txt'
+poetry_file ='/input/data/poetry.txt'
 
 # 诗集
 poetrys = []
