@@ -41,7 +41,7 @@ russell info <run_id>
 russell output <run_id>
 
 ```
-现在可以直接浏览输出的模型目录：[训练好的模型](http://dl.russellcloud.com/RussellCloud/dataset/poetry_generator-output/4/)
+现在可以直接浏览输出的模型目录：[训练好的模型](http://russellcloud.com/RussellCloud/dataset/poetry_generator_model/versions)
 
 
 第三步：使用预训练模型生成诗词
